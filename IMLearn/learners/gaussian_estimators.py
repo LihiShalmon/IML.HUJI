@@ -1,4 +1,7 @@
 from __future__ import annotations
+
+import math
+
 import numpy as np
 from numpy.linalg import inv, det, slogdet
 
@@ -7,6 +10,7 @@ class UnivariateGaussian:
     """
     Class for univariate Gaussian Distribution Estimator
     """
+
     def __init__(self, biased_var: bool = False) -> UnivariateGaussian:
         """
         Estimator for univariate Gaussian mean and variance parameters
@@ -33,6 +37,7 @@ class UnivariateGaussian:
         self.biased_ = biased_var
         self.fitted_, self.mu_, self.var_ = False, None, None
 
+
     def fit(self, X: np.ndarray) -> UnivariateGaussian:
         """
         Estimate Gaussian expectation and variance from given samples
@@ -51,10 +56,16 @@ class UnivariateGaussian:
         Sets `self.mu_`, `self.var_` attributes according to calculated estimation (where
         estimator is either biased or unbiased). Then sets `self.fitted_` attribute to `True`
         """
-        raise NotImplementedError()
-
+        self.mu_ = np.mean(X)
+        # set variance based on the bias
+        if self.biased_:
+            self.var_ = np.var(X, ddof=1)
+        else:
+            self.var_ = np.var(X, ddof=0)
+        # raise NotImplementedError()
         self.fitted_ = True
         return self
+
 
     def pdf(self, X: np.ndarray) -> np.ndarray:
         """
@@ -75,8 +86,17 @@ class UnivariateGaussian:
         ValueError: In case function was called prior fitting the model
         """
         if not self.fitted_:
-            raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        raise NotImplementedError()
+            raise ValueError(
+                "Estimator must first be fitted before calling `pdf` function")
+        # if we got here - the variable is fitted
+        CalcPdf = np.array(X, copy=True)
+        pdfFunc = np.vectorize(self.calcPdf)
+        return pdfFunc(CalcPdf)
+
+    def calcPdf(self, value):
+        return (1.0 / (math.sqrt(self.var_ * 2 * math.pi))) * math.exp(
+            -0.5 * ((value - self.mu_) / math.sqrt(self.var_)) ** 2)
+
 
     @staticmethod
     def log_likelihood(mu: float, sigma: float, X: np.ndarray) -> float:
@@ -97,13 +117,18 @@ class UnivariateGaussian:
         log_likelihood: float
             log-likelihood calculated
         """
-        raise NotImplementedError()
+        sum_mu = 0
+        for observation in X:
+            sum_mu += np.power((observation - mu), 2)
+        return -(X.size/2) * np.log(2 * np.pi * sigma) - sum_mu/(2 * sigma)
+
 
 
 class MultivariateGaussian:
     """
     Class for multivariate Gaussian Distribution Estimator
     """
+
     def __init__(self):
         """
         Initialize an instance of multivariate Gaussian estimator
@@ -143,8 +168,10 @@ class MultivariateGaussian:
         Sets `self.mu_`, `self.cov_` attributes according to calculated estimation.
         Then sets `self.fitted_` attribute to `True`
         """
-        raise NotImplementedError()
 
+
+        self.mu_ = np.mean(X, axis=0)
+        self.cov_ = np.cov(X, rowvar=0)
         self.fitted_ = True
         return self
 
@@ -168,10 +195,17 @@ class MultivariateGaussian:
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `pdf` function")
-        raise NotImplementedError()
+
+        scalar = 1 / (math.sqrt(math.pow(2 * np.pi, X.shape[1]) * det(self.mu_)))
+        exp_body = (- 0.5 * np.sum((X - self.mu_) @ inv(self.cov_) * (X - self.mu_), axis=1))
+        return scalar * np.exp(exp_body)
+
+
+        #raise NotImplementedError()
 
     @staticmethod
-    def log_likelihood(mu: np.ndarray, cov: np.ndarray, X: np.ndarray) -> float:
+    def log_likelihood(mu: np.ndarray, cov: np.ndarray,
+                       X: np.ndarray) -> float:
         """
         Calculate the log-likelihood of the data under a specified Gaussian model
 
@@ -189,4 +223,13 @@ class MultivariateGaussian:
         log_likelihood: float
             log-likelihood calculated
         """
-        raise NotImplementedError()
+        densities_sum = 0
+        for x in X:
+            # represents the expression that powers the exponent function in the pdf
+            matrix_mul = np.matmul(np.matmul((x-mu).transpose(), np.linalg.inv(cov)), x-mu)
+            densities_sum += matrix_mul
+        sqrt = np.sqrt((np.power(2 * np.pi, cov.shape[0]) * np.linalg.det(cov)))
+        return np.round(X.shape[0] * np.log(1/sqrt) + -0.5 * densities_sum, 3)
+
+
+
