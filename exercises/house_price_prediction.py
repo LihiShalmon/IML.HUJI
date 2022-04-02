@@ -23,7 +23,69 @@ def load_data(filename: str):
     Design matrix and response vector (prices) - either as a single
     DataFrame or a Tuple[DataFrame, Series]
     """
-    raise NotImplementedError()
+    df = pd.read_csv(filename)
+
+    #logical issues with the data
+    clean = df[(df.bedrooms >= 0) & (df.price >=0) & (df.bathrooms >=0) ]
+    clean = clean[(clean.sqft_lot15 >= 0)]
+    #data which is not correlated with the price
+    clean = clean.drop(['long','id'], 1)
+
+    #treating na
+    clean = clean.dropna()
+
+    clean_ren = clean[(clean.yr_renovated > 0)]
+    clean_not_ren = clean[(clean.yr_renovated == 0)]
+
+
+    dataset_info(clean)
+
+    corr = clean.corrwith(clean['price'])
+    corr = corr.sort_values()
+    corr = corr[(corr > 0.5)]
+    print(corr)
+
+    print("renovated@@@@")
+    corr = clean_ren.corrwith(clean['price'])
+    corr = corr.sort_values()
+    corr = corr[(corr > 0.5)]
+    print(corr)
+
+    print("not renovated@@@@")
+    corr = clean_not_ren.corrwith(clean['price'])
+    corr = corr.sort_values()
+    corr = corr[(corr > 0.5)]
+    print(corr)
+
+    print("not renovated@@@@")
+    corr = clean_not_ren.corrwith(clean['price'])
+    corr = corr.sort_values()
+    corr = corr[(corr > 0.5)]
+    print(corr)
+
+
+
+
+
+    #clean = clean[[corr[]]]
+
+
+    return df
+
+
+def dataset_info(df):
+    print("get shape")
+    print(df.shape)
+    print("get col-names")
+    print(df.columns)
+    print("get description")
+    print(df.describe())
+    print("get count")
+    print(df.count())
+    print("get minimal value")
+    print(df.min())
+
+
 
 
 def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") -> NoReturn:
@@ -49,13 +111,20 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
 if __name__ == '__main__':
     np.random.seed(0)
     # Question 1 - Load and preprocessing of housing prices dataset
-    raise NotImplementedError()
+    import sys
+
+    sys.path.append("..//")
+    sys_str = 'C://Users//user//Documents//Uni/year B/IML/IML.HUJI/datasets/house_prices.csv'
+    df = load_data(sys_str)
+
+
+
 
     # Question 2 - Feature evaluation with respect to response
-    raise NotImplementedError()
+    #raise NotImplementedError()
 
     # Question 3 - Split samples into training- and testing sets.
-    raise NotImplementedError()
+    #raise NotImplementedError()
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -64,4 +133,4 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    raise NotImplementedError()
+    #raise NotImplementedError()
