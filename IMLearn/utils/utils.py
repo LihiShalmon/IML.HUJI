@@ -33,8 +33,17 @@ def split_train_test(X: pd.DataFrame, y: pd.Series, train_proportion: float = .7
         Responses of test samples
 
     """
-    raise NotImplementedError()
+    sample_vect = np.random.binomial(1, train_proportion, X.len)
+    x_train = [], y_train = [], test_x = [], test_y = []
+    for row in X:
+        if sample_vect[row]:
+            x_train.append(X[row])
+            y_train.append(y[row])
+        else:
+            test_x.append(X[row])
+            test_y.append(y[row])
 
+    return pd.DataFrame(x_train), y_train, pd.DataFrame(test_x), test_y
 
 def confusion_matrix(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """
