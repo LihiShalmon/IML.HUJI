@@ -10,6 +10,7 @@ import plotly.io as pio
 pio.templates.default = "simple_white"
 
 
+
 def load_data(filename: str):
     """
     Load house prices dataset and preprocess data.
@@ -31,44 +32,39 @@ def load_data(filename: str):
 
     # treating outliers:
     clean = clean[clean["bedrooms"] < 25]
-    clean = clean[clean["sqft_lot"] < 1000000]
-
+    clean = clean[clean["price"] < 6000000]
+    clean = clean[clean["sqft_lot"] < 800000]
+    clean = clean[clean["sqft_living"] < 10000]
+    clean = clean[clean["sqft_basement"] < 4000]
 
     # data which is not correlated with the price
     clean = clean.drop(['long', 'lat', 'date', 'id'], 1)
 
     # handling categorical data
     clean["zipcode"] = clean["zipcode"].astype(int)
+    clean.drop(['zipcode'], 1)
 
     # treating na
     clean = clean.dropna()
 
     # renovated quantiles
-    clean_ren_recently = clean[(clean.yr_renovated > 0)]
-    clean_not_ren = clean[(clean.yr_renovated == 0)]
-
+    clean["is_renovated"] = np.where((clean["yr_renovated"] > 0), 1, 0)
     #dataset_info(clean)
-    # check
-    print("all data@@@@")
+
+    # check correlation
     corr = clean.corrwith(clean['price'])
     corr = corr.sort_values()
-    corr = corr[(corr > 0.3)]
+    corr = corr[(corr > 0.1)]
     print(corr)
     list_cols = corr.axes
     not_ren_tbl = clean[list_cols[0]]
 
     clean.insert(0, 'intercept', 1, True)
+    print(clean.head())
     return clean.drop("price", 1) , clean.price
 
 
 def dataset_info(df):
-    for col in df.columns:
-        try:
-            df[col] = pd.to_numeric(df[col])
-            df.hist(column=col)
-        except ValueError:
-            print('This column can not be represented as a histogram')
-
     print("get shape")
     print(df.shape)
     print("get col-names")
@@ -101,26 +97,18 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
     output_path: str (default ".")
         Path to folder in which plots are saved
     """
-    print("head")
-    print(X.head())
-    # for f in X:
-    #     rho = np.cov(X[f], y)[0,1] / (np.std(X[f]) * np.std(y))
-    #     print(rho)
     for feature in X:
         # calculate pearson correlation between variables:
         denominator = np.std(X[feature]) * np.std(y)
-        cov = np.cov(X[feature], y)[0, 1]/denominator
+        pearson = np.cov(X[feature], y)[0][1]/denominator
 
-        pearson = cov / denominator
-        fig = go.Figure([go.Scatter(x=X[feature], y=y, showlegend=True,
-                                marker=dict(color="black", opacity=.7),
-                                line=dict(color="black", dash="dash", width=1))],
-                    layout=go.Layout(title=f"Correlation Between {feature} and Response<br>"
-                                               f"<sup>Pearson Correlation {pearson}</sup>",
-                                     labels={"x": f"{feature}", "y": "Response "}))
+        fig = go.Figure([go.Scatter(x=X[feature], y=y, showlegend=True, mode='markers')],
+                    layout=go.Layout(title=f"Correlation Between {feature} and response<br>"
+                                               f"<sup>Pearson Correlation {pearson}</sup>"))
+        fig.update_layout(xaxis_title=f"{feature}", yaxis_title="response")
+        fig.show()
+        fig.write_image(output_path + r"\price_and_" + feature + ".png")
 
-        fig.write_image("pearson_correlation.%s.png" % feature)
-    return "path"
 
 
 if __name__ == '__main__':
@@ -135,8 +123,7 @@ if __name__ == '__main__':
     # Question 2 - Feature evaluation with respect to response
 
     # price_vector = df.loc[:, "price"]
-    print(price_vector.mean)
-    feature_evaluation(df, price_vector, "charts")
+    feature_evaluation(df, price_vector, r"C:\Users\user\Documents\Uni\year B\IML\charts")
 
     # Question 3 - Split samples into training- and testing sets.
 
@@ -147,4 +134,13 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
-    #raise NotImplementedError()
+    avg_loss = []
+    for sample_percentage in range(10, 101,1):
+        loss_for_p = []
+        for i in range(1, 11, 1):
+            cur_sample = df.sample(frac=sample_percentage, replace=False)
+            X_train, y_train, x_test ,y_test = split_train_test(cur_sample , price_vector, sample_percentage)
+            LinearRegression.fit(X_train, y_train)
+            loss_for_p.append(LinearRegression.loss(x_test, y_test))
+
+        avg_loss.append(sample_percentage, [np.loss_for_p.mean(), np.loss_for_p.std()])
