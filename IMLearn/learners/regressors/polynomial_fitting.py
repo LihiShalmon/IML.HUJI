@@ -20,7 +20,7 @@ class PolynomialFitting(BaseEstimator):
         """
         super().__init__()
         self.k = k
-        self.model = LinearRegression()
+        self.model = LinearRegression(include_intercept=False)
         self.coef = None
 
 

@@ -7,6 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 import plotly.io as pio
+from statistics import mean, stdev
 pio.templates.default = "simple_white"
 
 
@@ -41,26 +42,22 @@ def load_data(filename: str):
     clean = clean.drop(['long', 'lat', 'date', 'id'], 1)
 
     # handling categorical data
-    clean["zipcode"] = clean["zipcode"].astype(int)
-    clean.drop(['zipcode'], 1)
+    clean['floors'] = clean['floors'].astype(int)
+    clean = pd.get_dummies(clean, columns=['zipcode'])
 
     # treating na
     clean = clean.dropna()
 
-    # renovated quantiles
-    clean["is_renovated"] = np.where((clean["yr_renovated"] > 0), 1, 0)
     #dataset_info(clean)
 
     # check correlation
-    corr = clean.corrwith(clean['price'])
-    corr = corr.sort_values()
-    corr = corr[(corr > 0.1)]
-    print(corr)
-    list_cols = corr.axes
-    not_ren_tbl = clean[list_cols[0]]
+    # corr = clean.corrwith(clean['price'])
+    # corr = corr.sort_values()
+    # corr = corr[(corr > 0.1)]
+    # print(corr)
+    # list_cols = corr.axes
+    # not_ren_tbl = clean[list_cols[0]]
 
-    clean.insert(0, 'intercept', 1, True)
-    print(clean.head())
     return clean.drop("price", 1) , clean.price
 
 
@@ -102,11 +99,11 @@ def feature_evaluation(X: pd.DataFrame, y: pd.Series, output_path: str = ".") ->
         denominator = np.std(X[feature]) * np.std(y)
         pearson = np.cov(X[feature], y)[0][1]/denominator
 
+        # plot the relevant chart
         fig = go.Figure([go.Scatter(x=X[feature], y=y, showlegend=True, mode='markers')],
                     layout=go.Layout(title=f"Correlation Between {feature} and response<br>"
                                                f"<sup>Pearson Correlation {pearson}</sup>"))
         fig.update_layout(xaxis_title=f"{feature}", yaxis_title="response")
-        fig.show()
         fig.write_image(output_path + r"\price_and_" + feature + ".png")
 
 
@@ -121,11 +118,10 @@ if __name__ == '__main__':
     df, price_vector = load_data(sys_str)
 
     # Question 2 - Feature evaluation with respect to response
-
-    # price_vector = df.loc[:, "price"]
     feature_evaluation(df, price_vector, r"C:\Users\user\Documents\Uni\year B\IML\charts")
 
     # Question 3 - Split samples into training- and testing sets.
+    X_train, y_train, X_test, y_test = split_train_test(df, price_vector, 0.75)
 
     # Question 4 - Fit model over increasing percentages of the overall training data
     # For every percentage p in 10%, 11%, ..., 100%, repeat the following 10 times:
@@ -134,13 +130,61 @@ if __name__ == '__main__':
     #   3) Test fitted model over test set
     #   4) Store average and variance of loss over test set
     # Then plot average loss as function of training size with error ribbon of size (mean-2*std, mean+2*std)
+    regression = LinearRegression(False)
     avg_loss = []
-    for sample_percentage in range(10, 101,1):
-        loss_for_p = []
-        for i in range(1, 11, 1):
-            cur_sample = df.sample(frac=sample_percentage, replace=False)
-            X_train, y_train, x_test ,y_test = split_train_test(cur_sample , price_vector, sample_percentage)
-            LinearRegression.fit(X_train, y_train)
-            loss_for_p.append(LinearRegression.loss(x_test, y_test))
+    std_loss = []
+    lower_bound_CI = []
+    upper_bound_CI = []
 
-        avg_loss.append(sample_percentage, [np.loss_for_p.mean(), np.loss_for_p.std()])
+    percentage = np.linspace(10, 100, num=90)
+
+    for p in percentage:
+        loss_for_p = []
+        for time_sampled in range(1, 10, 1):
+
+            # get a % of the training data
+            df_train = X_train.sample(frac=p/100, random_state=time_sampled)
+            intercept_train = y_train.sample(frac=p/100, random_state=time_sampled)
+
+            # fit the model using the portion sampled
+            regression.fit(df_train.to_numpy(), intercept_train.to_numpy().flatten())
+            loss_for_p.append(regression.loss(X_test.to_numpy(),
+                                              y_test.to_numpy().flatten()))
+        # check for mean and std for the % :
+        avg_loss.append(mean(loss_for_p))
+        std_loss.append(stdev(loss_for_p))
+
+        # [mean - 2*std , [mean + 2*std ] for the percentage
+        lower_bound_CI.append(mean(loss_for_p) - 2*stdev(loss_for_p))
+        upper_bound_CI.append(mean(loss_for_p) + 2*stdev(loss_for_p))
+
+
+
+    avg_loss = np.array(avg_loss)
+    std_loss = np.array(std_loss)
+
+    # the chart is just like the one given as an example in the book
+    fig4 = go.Figure([go.Scatter(x=percentage, y=avg_loss,
+                                 mode="markers+lines",
+                                 name="avg Loss",
+                                 line=dict(dash="dash"),
+                                 marker=dict(color="green")),
+                      go.Scatter(x=percentage,
+                                 y=(lower_bound_CI),
+                                 fill='tonexty',
+                                 mode="lines",
+                                 name="Lower bound CI",
+                                 line=dict(color="lightgrey"),
+                                 showlegend=False),
+                      go.Scatter(x=percentage,
+                                 y=(upper_bound_CI),
+                                 fill='tonexty',
+                                 name="Upper bound CI",
+                                 mode="lines",
+                                 line=dict(color="lightgrey"),
+                                 showlegend=False)])
+    fig4.update_layout(title_text="mean and std of the loss function <br> over a growing percentage of samples")
+
+    fig4.show()
+
+

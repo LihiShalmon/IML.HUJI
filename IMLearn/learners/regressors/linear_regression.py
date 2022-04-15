@@ -52,7 +52,7 @@ class LinearRegression(BaseEstimator):
         """
         matrix = X.copy()
         if self.include_intercept_:
-            m = np.c_[np.ones(X.shape[0]), matrix]
+            matrix = np.c_[np.ones(X.shape[0]), matrix]
 
         self.coefs_ = pinv(matrix) @ y
 
