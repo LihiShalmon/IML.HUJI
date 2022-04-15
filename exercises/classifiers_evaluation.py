@@ -26,7 +26,9 @@ def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
         Class vector specifying for each sample its class
 
     """
-    raise NotImplementedError()
+    df = np.load(filename)
+    x, y = df[:, 1], df[:, 3]
+
 
 
 def run_perceptron():
@@ -38,10 +40,13 @@ def run_perceptron():
     """
     for n, f in [("Linearly Separable", "linearly_separable.npy"), ("Linearly Inseparable", "linearly_inseparable.npy")]:
         # Load dataset
-        raise NotImplementedError()
+        X,y = load_dataset(r"C:\Users\user\Documents\Uni\year B\IML\IML.HUJI\datasets\linearly_separable.npy")
 
         # Fit Perceptron and record loss in each fit iteration
         losses = []
+        # create perceptron
+        # in bar - callback - Lambda (perceptron ,xi, yi)
+        loss.append(p.loss(xi,yi))
         raise NotImplementedError()
 
         # Plot figure
