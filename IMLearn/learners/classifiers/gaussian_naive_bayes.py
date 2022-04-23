@@ -1,6 +1,7 @@
 from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
+import sklearn.naive_bayes
 
 class GaussianNaiveBayes(BaseEstimator):
     """
@@ -39,7 +40,24 @@ class GaussianNaiveBayes(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+
+        self.classes_ , n_k = np.unique(y,return_counts=True)
+        n_samples, n_features = X.shape[0],X.shape[1]
+
+        self.mu_ = np.array([])
+        self.vars_ = np.array([])
+        for k,idx in enumerate(self.classes_):
+            idx_in_class = np.flatnonzero(y==k)
+            class_mean = np.mean(X[idx_in_class])
+            self.mu_.append(class_mean, axis = 0)
+
+            arr = np.array([])
+            vect_for_var = np.arr([arr.append(X[i] - class_mean) for i in idx_in_class])
+            self.vars_[k] = vect_for_var.T @ vect_for_var / (n_k)
+
+        self.pi_ = n_k / n_samples
+
+        self.fitted_ = True
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
