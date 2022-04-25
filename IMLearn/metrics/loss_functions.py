@@ -38,13 +38,13 @@ def misclassification_error(y_true: np.ndarray, y_pred: np.ndarray, normalize: b
     Misclassification of given predictions
     """
     # check if values are equal in the i'th coordinate
-    are_equal = y_pred == y_true
+    are_equal = np.array(y_pred != y_true)
 
     # return normalized / unNormalized error rate
     if normalize:
-        return are_equal.count_nonzero()
+        return np.count_nonzero(are_equal)
     else:
-        return are_equal.count_nonzero()/are_equal.size
+        return np.count_nonzero(are_equal)/are_equal.size
 
 def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
