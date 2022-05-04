@@ -52,15 +52,13 @@ class LDA(BaseEstimator):
 
         self.mu_ = []
 
-        for k, idx in enumerate(self.classes_):
-            #idx_in_class = np.flatnonzero(y==k)
-            self.mu_.append(np.mean(X[y==k], axis=0))
+        for idx in range(self.classes_.size):
+            self.mu_.append(np.mean(X[y==idx], axis=0))
 
         self.mu_ = np.array(self.mu_)
         y_class_ind = np.searchsorted(self.classes_ , y)
         mu_vector = self.mu_[y_class_ind]
-        x_mu = (X - mu_vector)
-        self.cov_ = np.matmul((X - mu_vector).T, (X - mu_vector))
+        self.cov_ = np.matmul((X - mu_vector).T, (X - mu_vector))/(n_samples - self.classes_.size)
         self._cov_inv = inv(self.cov_)
         self.pi_ = n_k / n_samples
         self.fitted_ = True
@@ -113,12 +111,13 @@ class LDA(BaseEstimator):
             likelihood_over_classes = []
 
             # look for the label which maximizes probability for this sample
-            for k, idx in enumerate(self.classes_):
+            for idx in range(self.classes_.size):
                 a_k = self._cov_inv @ self.mu_[idx]
                 b_k = np.log(self.pi_[idx]) - 0.5 * (self.mu_[idx] @ self._cov_inv @ self.mu_[idx])
-                likelihood_over_classes.append((a_k.T @ X[i,:] + b_k) * self.pi_[k])
+                likelihood_over_classes.append((a_k.T @ X[i,:] + b_k))
 
             likelihoods.append(likelihood_over_classes)
+
         return  np.array(likelihoods)
 
 

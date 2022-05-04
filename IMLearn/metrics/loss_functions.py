@@ -42,9 +42,9 @@ def misclassification_error(y_true: np.ndarray, y_pred: np.ndarray, normalize: b
 
     # return normalized / unNormalized error rate
     if normalize:
-        return np.count_nonzero(are_equal)
-    else:
         return np.count_nonzero(are_equal)/are_equal.size
+    else:
+        return np.count_nonzero(are_equal)
 
 def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """

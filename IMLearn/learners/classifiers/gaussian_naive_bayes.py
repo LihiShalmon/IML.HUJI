@@ -1,7 +1,6 @@
 from typing import NoReturn
 from ...base import BaseEstimator
 import numpy as np
-import sklearn.naive_bayes
 
 class GaussianNaiveBayes(BaseEstimator):
     """
@@ -45,17 +44,23 @@ class GaussianNaiveBayes(BaseEstimator):
         n_samples, n_features = X.shape[0],X.shape[1]
 
         self.mu_ = np.zeros((len(self.classes_),n_features))
-        self.vars_ = []
+        self.vars_ = np.zeros((len(self.classes_),n_features))
+        cov = []
 
-        for idx, cur_class in enumerate(self.classes_):
-            idx_in_class = (y == cur_class)
-            self.mu_[idx] = X[idx_in_class].mean(axis=0)
+        for idx in range(self.classes_.size):
+            idx_in_class = (y == self.classes_[idx])
+            self.mu_[idx] = np.mean(X[idx_in_class], axis=0)
+
             vect = X[idx_in_class] - self.mu_[idx]
-            self.vars_.append(np.diag(np.power(vect, 2).mean(axis = 0)))
-
-        self.vars_ = np.array(self.vars_)
+            cov.append(np.diag(np.power(vect, 2).mean(axis = 0)))
+            for feature in range(n_features):
+                self.vars_[idx][feature] = cov[idx][feature][feature]
+        self.vars_ = np.array(cov)
+        self.cov_ = self.vars_
         self.pi_ = n_k / n_samples
+
         self.fitted_ = True
+
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -97,16 +102,20 @@ class GaussianNaiveBayes(BaseEstimator):
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
+        likelihood = np.ndarray((len(X), len(self.classes_)))
 
-        likelihoods = np.zeros((X.shape[0], len(self.classes_)))
-        for k in range(self.classes_.size):
-            cov_inv = np.linalg.pinv(self.vars_[k])
-            a_k = np.matmul(cov_inv, self.mu_.T)
-            b_k = np.log(self.pi_[k]) - 0.5 * np.diag(
-                np.matmul(self.mu_, a_k.T))
+        for k in range(len(self.classes_)):
+            cov = self.vars_[k]
 
-            likelihoods[:, k] = a_k[k] @ X.T + b_k[k]
-        return likelihoods
+            const_normal_distribution = 1 / np.sqrt(
+                np.power(2 * np.pi, len(X)) * np.linalg.det(cov))
+
+            vec_for_exp = np.diag((X - self.mu_[k]) @ np.linalg.inv(cov) @
+                          np.transpose((X - self.mu_[k])))
+
+            likelihood[:, k] = self.pi_[k] * const_normal_distribution * np.exp((-1 / 2) * vec_for_exp)
+
+        return likelihood
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """

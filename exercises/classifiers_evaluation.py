@@ -40,17 +40,15 @@ def run_perceptron():
     for n, f in [("Linearly Separable", "linearly_separable.npy"),
                  ("Linearly Inseparable", "linearly_inseparable.npy")]:
             # Load dataset
-            filename = r"C:/Users/LIHI/Documents/Uni/yearB/IML/IML.HUJI/datasets/" + f
-            X, y = load_dataset(filename)
+            X, y = load_dataset(f'../datasets/{f}')
 
             # Fit Perceptron and record loss in each fit iteration
             losses = []
 
             callable_func = lambda p, x1, y1: losses.append(p._loss(X, y))
-            perceptron = Perceptron(callback=callable_func, include_intercept=False)
+            perceptron = Perceptron(callback=callable_func, include_intercept=True)
 
             perceptron._fit(X, y)
-            print(losses)
             # Plot figure of loss as function of fitting iteration
             fig3 = go.Figure(go.Scatter(y=losses, mode='markers+lines'),
                              layout=go.Layout(
@@ -92,56 +90,74 @@ def compare_gaussian_classifiers():
     """
     Fit both Gaussian Naive Bayes and LDA classifiers on both gaussians1 and gaussians2 datasets
     """
+
     for f in ["gaussian1.npy", "gaussian2.npy"]:
-        # Load dataset
-        X, y = load_dataset(f'../datasets/{f}')
-        #filename = r"C:/Users/Lihi/Documents/Uni/yearB/IML/IML.HUJI/datasets/" + f
-        #X, y = load_dataset(filename)
-
-        train_X, train_y, test_X, test_y = split_train_test(pd.DataFrame(X), pd.Series(y), 0.5)
-
-        # Fit models and predict over training set
+        # init
         gb = GaussianNaiveBayes()
         lda = LDA()
-
         models = [gb, lda]
         model_names = ["Gaussian Naive Bayes", "LDA"]
 
-        # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left and LDA predictions
-        # on the right. Plot title should specify dataset used and subplot titles should specify algorithm and accuracy
-        # Create subplots
+        # Load dataset
+        X, y = load_dataset(f'../datasets/{f}')
 
+        # Plot a figure with two suplots, showing the Gaussian Naive Bayes predictions on the left and LDA predictions
+        # on the right.
+        loss =[]
+
+        # Create subplots
         fig = make_subplots(rows=1, cols=2, subplot_titles=[rf"$\textbf{{{m}}}$" for m in model_names],
                             horizontal_spacing=0.01, vertical_spacing=.03)
+
         for i, m in enumerate(models):
+
             # fit
-            models[i]._fit(np.array(train_X), np.array(train_y))
+            models[i]._fit(X, y)
             # predict
-            pred = models[i]._predict(np.array(test_X))
-            test_X = np.array(test_X)
-            fig.add_traces(go.Scatter(x=test_X[:, 0], y=test_X[:, 1],
+            pred = models[i]._predict(X)
+
+            from IMLearn.metrics import accuracy
+            loss.append(round(1 - models[i]._loss(X,y),2))
+
+            # Add traces for data-points setting symbols and colors
+            fig.add_traces(go.Scatter(x=X[:, 0], y=X[:, 1],
                                       mode="markers",
                                       showlegend=False,
-                                      marker=dict(color= pred, symbol=np.array(test_y), line=dict(color="black", width=1))),
+                                      marker=dict(color= pred, symbol=y, line=dict(color="black", width=1))),
                                       rows=(i // 3) + 1, cols=(i % 3) + 1)
 
-            fig.update_layout(title=rf"$\textbf{{ Decision Boundaries Of Models}}$",
-                          margin=dict(t=100)) \
-            .update_xaxes(visible=False).update_yaxes(visible=False)
-        fig.show()
-        from IMLearn.metrics import accuracy
+            # Add `X` dots specifying fitted Gaussians' means
+            fig.add_traces(go.Scatter(x= models[i].mu_[:,0], y= models[i].mu_[:,1],
+                                      mode="markers",
+                                      showlegend=False,
+                                      marker=dict(color='black', symbol='x-thin', size=15, line=dict(color="black", width=5))),
+                           rows=(i // 3) + 1, cols=(i % 3) + 1)
 
-        # # Add traces for data-points setting symbols and colors
-        # raise NotImplementedError()
-        #
-        # # Add `X` dots specifying fitted Gaussians' means
-        # raise NotImplementedError()
-        #
-        # # Add ellipses depicting the covariances of the fitted Gaussians
-        # raise NotImplementedError()
+            # add ellipse shapes according to the covariance matrix
+            if i== 0:
+                for k in range(models[i].classes_.size):
+                    print(model_names[i])
+                    fig.add_traces(get_ellipse(models[i].mu_[k],models[i].cov_[k]),
+                                   rows=(i // 3) + 1, cols=(i % 3) + 1)
+            else:
+                for k in range(models[i].classes_.size):
+                    print(model_names[i])
+                    fig.add_traces(get_ellipse(models[i].mu_[k],models[i].cov_),
+                                   rows=(i // 3) + 1, cols=(i % 3) + 1)
+
+        # update titles of the subplots with the loss of each model:
+        fig.layout.annotations[0].update(text = str(model_names[0]) +" accuracy: "  + str(loss[0]) )
+        fig.layout.annotations[1].update(text = str(model_names[1]) +" accuracy: " + str(loss[1]) )
+
+        fig.update_layout(showlegend=False)
+        fig.show()
+
+
+
+
 
 
 if __name__ == '__main__':
     np.random.seed(0)
-    #run_perceptron()
+    run_perceptron()
     compare_gaussian_classifiers()

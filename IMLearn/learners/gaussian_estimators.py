@@ -228,6 +228,7 @@ class MultivariateGaussian:
             # represents the expression that powers the exponent function in the pdf
             matrix_mul = np.matmul(np.matmul((x-mu).transpose(), np.linalg.inv(cov)), x-mu)
             densities_sum += matrix_mul
+
         sqrt = np.sqrt((np.power(2 * np.pi, cov.shape[0]) * np.linalg.det(cov)))
         return np.round(X.shape[0] * np.log(1/sqrt) + -0.5 * densities_sum, 3)
 

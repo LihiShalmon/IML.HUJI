@@ -94,9 +94,13 @@ class Perceptron(BaseEstimator):
         -----
         Fits model with or without an intercept depending on value of `self.fit_intercept_`
         """
-        X = self.add_intercept_col(X)
+
+        if self.include_intercept_:
+            X = self.add_intercept_col(X)
+
         self.coefs_ = np.zeros(X.shape[1])
         iteration =0
+
         while (np.any(np.sign(X @ self.coefs_) - y)) and (iteration < self.max_iter_):
             idx_mistake = np.nonzero(np.sign(X @ self.coefs_) - y)[0][0]
             self.coefs_ += X[idx_mistake][:] * y[idx_mistake]
