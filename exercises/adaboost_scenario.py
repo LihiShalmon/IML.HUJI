@@ -59,7 +59,7 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
                      mode="lines", name="train",
                      showlegend=True,
                      marker=dict(line=dict(color="black", width=1)))
-    fig1.update_layout(title="Error of AdaBoost over increasing iterations model",
+    fig1.update_layout(title="Training and test errors as a function of the number of learners",
                        xaxis_title="Models in use",
                        yaxis_title="Prediction rate")
     fig1.show()
@@ -69,10 +69,10 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
     T = [5, 50, 100, 250]
     lims = np.array([np.r_[train_X, test_X].min(axis=0), np.r_[train_X, test_X].max(axis=0)]).T + np.array([-.1, .1])
 
-    fig = make_subplots(rows=2, cols=2, subplot_titles=[f"{m} iterations" for m in T],
+    decision_surfaces_plot = make_subplots(rows=2, cols=2, subplot_titles=[f"{m} iterations" for m in T],
                         horizontal_spacing=0.01, vertical_spacing=.03)
     for i, m in enumerate(T):
-        fig.add_traces([decision_surface(
+        decision_surfaces_plot.add_traces([decision_surface(
             lambda df: adabooster.partial_predict(df, m), lims[0], lims[1], showscale=False),
             go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers", showlegend=False,
                        marker=dict(color=test_y,
@@ -80,42 +80,46 @@ def fit_and_evaluate_adaboost(noise, n_learners=250, train_size=5000, test_size=
                                    line=dict(color="black", width=1)))],
             rows=(i // 2) + 1, cols=(i % 2) + 1)
 
-    fig.update_layout(title=rf"$\textbf{{ Decision Boundaries Of the model - by comitee size }}$", margin=dict(t=100)) \
+    decision_surfaces_plot.update_layout(title=rf"$\textbf{{ Decision Boundaries Of the model - by comitee size }}$", margin=dict(t=100)) \
         .update_xaxes(visible=False).update_yaxes(visible=False)
-    fig.show()
+    decision_surfaces_plot.show()
 
     # Question 3: Decision surface of best performing ensemble
     optimal_ensemble = np.argmin(loss_test)
     if optimal_ensemble.size > 1:
         optimal_ensemble = optimal_ensemble[0]
 
-    fig_opt_ensemble = go.Figure(
-        data=[decision_surface(
-            lambda df: adabooster.partial_predict(df, optimal_ensemble), lims[0], lims[1], showscale=False),
-            go.Scatter(x=test_X[:, 0], y=test_X[:, 1], mode="markers", showlegend=False,
-                       marker=dict(color=test_y, colorscale=[custom[0], custom[-1]],
-                                   line=dict(color="black", width=1)))])
-
-    fig_opt_ensemble.update_layout(title=rf"$\textbf{{Decision boundary with lowest test error archived on the {optimal_ensemble} iteration.accuracy {round(1-loss_test[optimal_ensemble],3)}}}$",
-                                   margin=dict(t=100)) \
-        .update_xaxes(visible=False).update_yaxes(visible=False)
+    fig_opt_ensemble = go.Figure(data=[decision_surface(lambda X:
+                                            adabooster.partial_predict(X, n_learners),
+                                            lims[0], lims[1],
+                                            showscale=False),
+                           go.Scatter(x=test_X[:, 0], y=test_X[:, 1],
+                                      mode="markers",
+                                      showlegend=False,
+                                      marker=dict(color=test_y,
+                                                  colorscale=[custom[0],
+                                                              custom[-1]],
+                                                  line=dict(color="black",
+                                                            width=1)))],
+                     layout=go.Layout(
+                         title=f"Boundary with lowest test error. Ensemble: {optimal_ensemble}. "
+                               f" Accuracy:{round(1-loss_test[optimal_ensemble],3)}"))
     fig_opt_ensemble.show()
 
     # Question 4: Decision surface with weighted samples
-
-    optimal_ensemble = np.argmin(loss_test)
-    fig_opt_ensemble = go.Figure(
-        data=[decision_surface(
-            lambda df: adabooster.partial_predict(df, n_learners), lims[0], lims[1], showscale=False),
-            go.Scatter(x=train_X[:, 0], y=train_X[:, 1], mode="markers", showlegend=False,
-                       marker=dict(color=train_y, size= adabooster.D_* 5 / np.max(adabooster.D_) , colorscale=[custom[0], custom[-1]],
-                                   line=dict(color="black", width=1)))])
-
-    fig_opt_ensemble.update_layout(
-        title=rf"$\textbf{{Last iteration, decision boundary on the train dataset- points by size}}$",
-        margin=dict(t=100)) \
-        .update_xaxes(visible=False).update_yaxes(visible=False)
-    fig_opt_ensemble.show()
+    fig_wighted_samples = go.Figure(data=[decision_surface(adabooster.predict,
+                                            lims[0], lims[1],
+                                            showscale=False),
+                           go.Scatter(x=train_X[:, 0], y=train_X[:, 1],
+                                      mode="markers",
+                                      showlegend=False,
+                                      marker=dict(color=train_y, size= adabooster.D_/np.max(adabooster.D_) * 5,
+                                                  colorscale=[custom[0],
+                                                              custom[-1]],
+                                                  line=dict(color="black",
+                                                            width=1)))],
+                     layout=go.Layout(title=f"Full ensemble, sample size indicated weight"))
+    fig_wighted_samples.show()
 
 
 if __name__ == '__main__':

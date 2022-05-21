@@ -108,15 +108,18 @@ class DecisionStump(BaseEstimator):
         For every tested threshold, values strictly below threshold are predicted as `-sign` whereas values
         which equal to or above the threshold are predicted as `sign`
         """
-
+        # value sorting
         sort_idx = np.argsort(values)
         values, labels = values[sort_idx], labels[sort_idx]
         values = values.reshape(-1, 1)
 
-        all_thresholds = np.concatenate([np.array([-np.inf]).reshape(1, 1), values, np.array([np.inf]).reshape(1, 1)])
+        # creating the list of all possible thresholds:
+        inf = np.array([np.inf]).reshape(1, 1)
+        all_thresholds = np.concatenate([-inf, values, inf])
 
-        # loss when theta is initiated in -inf
+        # The threshold is initiated in -inf
         initial_threshold_loss = np.sum(np.abs(labels[np.sign(labels) == sign]))
+        # calculating the loss over every threshold
         losses_by_threshold = np.append(initial_threshold_loss, initial_threshold_loss - np.cumsum(labels * sign))
         min_loss_idx = np.argmin(losses_by_threshold)
 
