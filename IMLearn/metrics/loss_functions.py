@@ -16,7 +16,7 @@ def mean_square_error(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     -------
     MSE of given predictions
     """
-    diff_squared = (y_true - y_pred) **2
+    diff_squared = (y_true - y_pred) ** 2
     return np.mean(diff_squared)
 
 
@@ -62,7 +62,7 @@ def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     Accuracy of given predictions
     """
     error_num = misclassification_error(y_true,y_pred)
-    obeservation_num =y_true.length
+    obeservation_num = y_true.length
     true_values = obeservation_num - error_num
 
     return true_values/obeservation_num

@@ -18,11 +18,8 @@ class PolynomialFitting(BaseEstimator):
         k : int
             Degree of polynomial to fit
         """
-        super().__init__()
-        self.k = k
-        self.model = LinearRegression(include_intercept=False)
-        self.coef = None
-
+        self.lin_reg = LinearRegression(True)
+        self._k = k
 
     def _fit(self, X: np.ndarray, y: np.ndarray) -> NoReturn:
         """
@@ -36,11 +33,8 @@ class PolynomialFitting(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        # re using the fit function in the linear regression class
-        # transform saves code since we apply the vander monde there
-
-        self.model._fit(self.__transform(X), y)
-        #self.coef =self.model.coefs_
+        vander = self.__transform(X)
+        self.lin_reg.fit(vander,y)
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -56,9 +50,8 @@ class PolynomialFitting(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        # re using the function made in the linear regression class
-        return self.model._predict(self.__transform(X))
-
+        vander = self.__transform(X)
+        return self.lin_reg.predict(vander)
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -77,7 +70,8 @@ class PolynomialFitting(BaseEstimator):
         loss : float
             Performance under MSE loss function
         """
-        return self.model._loss(self.__transform(X), y)
+        vander = self.__transform(X)
+        return self.lin_reg.loss(vander,y)
 
     def __transform(self, X: np.ndarray) -> np.ndarray:
         """
@@ -92,4 +86,5 @@ class PolynomialFitting(BaseEstimator):
         transformed: ndarray of shape (n_samples, k+1)
             Vandermonde matrix of given samples up to degree k
         """
-        return np.vander(X, self.k + 1, increasing=True)
+        vander = np.vander(X,N=self._k+1)
+        return vander
