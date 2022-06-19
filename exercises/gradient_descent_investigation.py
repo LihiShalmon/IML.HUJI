@@ -1,5 +1,8 @@
+import os
+
 import numpy as np
 import pandas as pd
+import  plotly.express as px
 from typing import Tuple, List, Callable, Type
 
 from IMLearn import BaseModule
@@ -78,14 +81,54 @@ def get_gd_state_recorder_callback() -> Tuple[Callable[[], None], List[np.ndarra
 
 def compare_fixed_learning_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                  etas: Tuple[float] = (1, .1, .01, .001)):
-    raise NotImplementedError()
+
+    #l2_norm = L2(weights=init)
+    #plot_for_module_step(etas, init, norm = l2_norm, f=L2, name="L2")
+
+    l1_norm =L1(weights=init)
+    plot_for_module_step(etas, init, norm = l1_norm, f=L1 , name="L1")
+
+
+
+def plot_for_module_step(etas, init, norm, f, name):
+    fig_convergence = go.Figure()
+    np_min = np.infty
+
+    def callback(solver, w_t, val, grad, t, eta, delta):
+        weights_list[t] = w_t
+        list_vals[t] = val
+        t_fin[-1] = t
+
+    for step in etas:
+        if name =="L2":
+            norm = L2(weights=init)
+        else:
+            norm =L1(weights=init)
+        t_fin = [0]
+        weights_list = np.empty((1001, 2))
+        list_vals = np.empty((1001,))
+        weights_list[0] = init
+
+        gd = GradientDescent(learning_rate=FixedLR(step), callback=callback)
+        gd.fit(f=norm, X=None, y=None)
+        fig = plot_descent_path(module=f, descent_path=weights_list[: t_fin[0]+1], title=name)
+        fig.show()
+        fig_convergence.add_trace(go.Scatter(x=np.arange(t_fin[0]+1), y=list_vals[:t_fin[0]+1], mode="lines",
+                                 name="eta = " + str(step)))
+
+        if np_min > min(list_vals):
+            np_min = min(list_vals)
+
+    # fig_convergence.update_layout(title="{0} norm as function of gradient descent iteration".format(name),
+    #                        legend_title = "Chosen eta")
+    # fig_convergence.show()
+    print("min for"+ name+ "is: "+ str(np_min))
 
 
 def compare_exponential_decay_rates(init: np.ndarray = np.array([np.sqrt(2), np.e / 3]),
                                     eta: float = .1,
                                     gammas: Tuple[float] = (.9, .95, .99, 1)):
     # Optimize the L1 objective using different decay-rate values of the exponentially decaying learning rate
-    raise NotImplementedError()
 
     # Plot algorithm's convergence for the different values of gamma
     raise NotImplementedError()
@@ -127,7 +170,7 @@ def load_data(path: str = "../datasets/SAheart.data", train_portion: float = .8)
 
 
 def fit_logistic_regression():
-    # Load and split SA Heard Disease dataset
+    # Load and split SA Heart Disease dataset
     X_train, y_train, X_test, y_test = load_data()
 
     # Plotting convergence rate of logistic regression over SA heart disease data

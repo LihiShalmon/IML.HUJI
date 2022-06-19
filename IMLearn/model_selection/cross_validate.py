@@ -41,9 +41,11 @@ def cross_validate(estimator: BaseEstimator,
         Average validation score over folds
     """
     # shuffle data
-    idx = np.arange(X.shape[0])
-    np.random.shuffle(idx)
-    X, y = X[idx], y[idx]
+    #idx = np.arange(X.shape[0])
+    #np.random.shuffle(idx)
+    #X, y = X[idx], y[idx]
+
+
 
     # split to folds
     X_split = np.array_split(X, cv)
@@ -52,14 +54,14 @@ def cross_validate(estimator: BaseEstimator,
     validation_score = 0
     train_score = 0
 
-    for i in range(len(X_split)):
+    for i in range(cv):
         # Get the i'th fold
-        train_X, train_y = np.concatenate(X_split[:i]+ X_split[i+1:] , axis=0),  np.concatenate(y_split[:i] + y_split[i+1:], axis=0)
+        train_X, train_y = np.concatenate(X_split[:i]+ X_split[i+1:], axis=0),  np.concatenate(y_split[:i] + y_split[i+1:], axis=0)
         test_X, test_y = X_split[i], y_split[i]
 
-        estimator.fit(train_X,train_y)
+        estimator.fit(train_X, train_y)
+
         train_score += scoring(train_y, estimator.predict(train_X))
         validation_score += scoring(test_y, estimator.predict(test_X))
 
-    return train_score/cv, validation_score/cv
-
+    return train_score/(cv), validation_score/(cv)
