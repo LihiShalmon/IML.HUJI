@@ -39,12 +39,14 @@ class GradientDescent:
         Callable function receives as input any argument relevant for the current GD iteration. Arguments
         are specified in the `GradientDescent.fit` function
     """
+
     def __init__(self,
                  learning_rate: BaseLR = FixedLR(1e-3),
                  tol: float = 1e-5,
                  max_iter: int = 1000,
                  out_type: str = "last",
-                 callback: Callable[[GradientDescent, ...], None] = default_callback):
+                 callback: Callable[
+                     [GradientDescent, ...], None] = default_callback):
         """
         Instantiate a new instance of the GradientDescent class
 
@@ -105,12 +107,12 @@ class GradientDescent:
         following named arguments:
             - solver: GradientDescent
                 self, the current instance of GradientDescent
-            - weights: ndarray of shape specified by module's weights
+            - weights: ndarray of shape specified by module'cur_score weights
                 Current weights of objective
-            - val: ndarray of shape specified by module's compute_output function
+            - val: ndarray of shape specified by module'cur_score compute_output function
                 Value of objective function at current point, over given data X, y
-            - grad:  ndarray of shape specified by module's compute_jacobian function
-                Module's jacobian with respect to the weights and at current point, over given data X,y
+            - grad:  ndarray of shape specified by module'cur_score compute_jacobian function
+                Module'cur_score jacobian with respect to the weights and at current point, over given data X,y
             - t: int
                 Current GD iteration
             - eta: float
@@ -118,41 +120,38 @@ class GradientDescent:
             - delta: float
                 Euclidean norm of w^(t)-w^(t-1)
 
-        """
-        # init
-        out_w = f.weights
-        out_score = f.compute_output()
-        delta = np.inf
+         """
+        # init all
         t = 0
+        steps_taken = []
+        outputs = []
+        delta = np.inf
+        # run iterations
+        self.decent_iterations(X, delta, f, outputs, steps_taken, t, y)
 
-        while self.tol_ < delta and t < self.max_iter_:
-            w_t = f.weights.copy()
-            eta = self.learning_rate_.lr_step(t=t)
-            grad = f.compute_jacobian()
-            val = f.compute_output()
-            # update the new weight
-            f.weights = f.weights - eta * (grad)
-            delta = self.get_delta(w_t, f.weights.copy())
+        # handle outputs
+        if self.out_type_ == "last":
+            return steps_taken[-1]
+        elif self.out_type_ == "average":
+            return np.mean(steps_taken)
+        elif self.out_type_ == "best":
+            return steps_taken[np.argmin(outputs)]
 
+    def decent_iterations(self, X, delta, f, outputs, steps, t, y):
+        while t < self.max_iter_ and delta > self.tol_:
+            # save all the info from the prev iteration
+            old_w = f.weights
+            gradient_direction = f.compute_jacobian(X=X, y=y)
+            eta_value = self.learning_rate_.lr_step(t=t)
 
-            self.callback_(self,f.weights , val, grad, t, eta, delta)
-            out_w = f.weights
-            #out_w, out_score = self.save_output(w_t.copy(), val.copy(), out_w.copy(), out_score.copy(), t)
+            # adjust weights
+            f.weights = f.weights - eta_value * gradient_direction
+            # delta is the diff between the old and newly assigned wights
+            delta = np.abs(np.linalg.norm(f.weights - old_w, ord=2))
+            if self.callback_ is not None:
+                self.callback_(solver=self,  w_t=f.weights, val=f.compute_output(X=X, y=y),
+                               grad=f.compute_jacobian(X=X, y=y), t=t, eta=eta_value ,delta=delta)
             t += 1
+            steps.append(old_w)
+            outputs.append(f.compute_output(X=X, y=y))
 
-        return out_w
-
-
-    def save_output(self, w_t, val,best_w ,best_w_score, t):
-        if self.out_type_ =="last":
-            return  w_t ,val
-        if self.out_type_ =="best":
-            if val < best_w_score:
-                return w_t.copy(), val.copy()
-            else:
-                best_w, best_w_score
-        if self.out_type_ =="average":
-            return ((t-1)*best_w + w_t)/t, 0
-
-    def get_delta(self, w1 , w2):
-        return np.linalg.norm(w2 - w1, ord=2)
